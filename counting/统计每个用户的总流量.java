@@ -1,7 +1,3 @@
-/*
-统计一个网站有哪些用户访问
-*/
-
 package wordcountTest;
 
 import java.io.IOException;
@@ -21,11 +17,11 @@ import org.apache.hadoop.util.GenericOptionsParser;
 public class WordCount {
 
   public static class Map 
-            extends Mapper<LongWritable, Text, Text, LongWritable>{
+            extends Mapper<LongWritable, Text, Text, IntWritable>{
 
     private final static IntWritable one = new IntWritable(1); // type of output value
-    private Text webPage = new Text();   // type of output key
-    private LongWritable flow = new LongWritable();
+    private Text user = new Text();   // type of output key
+    private IntWritable flow = new IntWritable();
       
     public void map(LongWritable key, Text value, Context context
                     ) throws IOException, InterruptedException {
@@ -36,33 +32,32 @@ public class WordCount {
 //        context.write(word, one);     // create a pair <keyword, 1> 
 //      }
     	String line = value.toString();
-    	String [] array = line.split(" ");
+    	String [] array = line.split("\t");
     	if(array.length==2){
-    		webPage.set(array[1]);
-    		flow = new LongWritable(Long.parseLong(array[0]));
-    		context.write(webPage,flow);
-    	}/*else{
+    		user.set(array[0]);
+    		flow = new IntWritable(Integer.parseInt(array[1]));
+    		context.write(user, flow);
+    	}else{
     		return;
-    	}*/
+    	}
     }
   }
   
   public static class Reduce
-       extends Reducer<Text, LongWritable, Text, LongWritable> {
+       extends Reducer<Text,IntWritable,Text,IntWritable> {
 
     private IntWritable result = new IntWritable();
 
-    public void reduce(Text key, Iterable<LongWritable> values, 
+    public void reduce(Text key, Iterable<IntWritable> values, 
                        Context context
                        ) throws IOException, InterruptedException {
-//      int sum = 0; // initialize the sum for each keyword
-      for (LongWritable val : values) {
-    	  context.write(key, val);
-//        sum += val.get();  
+      int sum = 0; // initialize the sum for each keyword
+      for (IntWritable val : values) {
+        sum += val.get();  
       }
-//      result.set(sum);
+      result.set(sum);
 
-//      context.write(key, values); // create a pair <keyword, number of occurences>
+      context.write(key, result); // create a pair <keyword, number of occurences>
     }
   }
 
@@ -84,14 +79,13 @@ public class WordCount {
    
     // uncomment the following line to add the Combiner
     // job.setCombinerClass(Reduce.class);
-    // set output key type  
-
+    // set output key type   
     job.setOutputKeyClass(Text.class);
     // set output value type
-    job.setOutputValueClass(LongWritable.class);
+    job.setOutputValueClass(IntWritable.class);
     
     //set reduce number
-    job.setNumReduceTasks(3);
+    job.setNumReduceTasks(1);
     //set the HDFS path of the input data
     FileInputFormat.addInputPath(job, new Path(otherArgs[0]));
     // set the HDFS path for the output
